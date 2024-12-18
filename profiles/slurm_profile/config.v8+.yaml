@@ -1,0 +1,30 @@
+# Container settings
+use-singularity: True
+use-conda: True
+
+executor: cluster-generic
+cluster-generic-submit-cmd:
+  mkdir -p slurm-logs/{rule}/ &&
+  sbatch
+    --partition={resources.partition}
+    --cpus-per-task={resources.cpus}
+    --gres=gpu:{resources.gpus}
+    --mem={resources.mem}
+    --time={resources.runtime}
+    --job-name={rule}-{wildcards}
+    --output=slurm-logs/{rule}/{rule}-{wildcards}-%j.out
+
+# Default resource settings (applied if not specified in rule)
+default-resources:
+  - slurm_partition='medium'
+  - cpus_per_task=8
+  - mem_mb=10000
+  - runtime=1440
+
+# General execution settings
+jobs: 20                # Maximum concurrent jobs
+restart-times: 0        # Number of times to restart failed jobs
+latency-wait: 15        # Time to wait for files to appear
+verbose: True           # Detailed logging
+rerun-incomplete: True
+printshellcmds: True

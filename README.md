@@ -1,4 +1,65 @@
+- This folder is intend to use snakemake to run progressive cactus on the gwdg clusters
+- forked from https://github.com/harvardinformatics/cactus-snakemake 
+- this version works with snakemake v8+ 
+- use conda-env_gwdg.yaml to setup conda env in gwdg
+- use apptainer
+    - docker://quay.io/comparative-genomics-toolkit/cactus:v2.9.3-gpu
+- snakemake v8.25.5
+
+# set up (create) a conda env contains snakemake v8, apptainer, and other necessary dependencies
+```bash
+screen -S ca4
+mkdir /home/mpg08/mko/pipelines/cactus/test_smk8_cactus
+cd /home/mpg08/mko/pipelines/cactus/test_smk8_cactus
+
+module load rev/23.12 anaconda3/2023.09-0 
+
+git clone https://github.com/maggieMCKO/cactus-snakemake.git
+conda env create --name cactus_env4 --file=cactus-snakemake/envs/conda-env_gwdg.yaml
+conda activate cactus_env4
+# check installed versions
+python --version # 3.12.8
+snakemake --version # 8.25.5
+apptainer --version # 1.3.6
+```
+
+This version of Snakemake seems to have a bug that prevent conda directive in certain cases
+- https://github.com/snakemake/snakemake/issues/3192
+- temp solution: manually change `snakemake/deployment/conda.py` in the created conda env as the above link
+- line 952 from `return self.path == other.file` to `return self.path == other.path`
+```bash
+# /home/mpg08/mko/.conda/envs/cactus_env4/lib/python3.12/site-packages/snakemake/deployment/conda.py
+```
+
+# run snakemake (quick start)
+- more detailed instruction see below, forked from forked from https://github.com/harvardinformatics/cactus-snakemake
+```bash
+
+# input
+cp /home/mpg08/mko/pipelines/cactus/test_4sp_snakemake6-2/seqfile.txt .
+cp -r /home/mpg08/mko/pipelines/cactus/test_4sp_snakemake6-2/assembly assemblies/
+
+# get cactus-gpu version
+module load rev/23.12 anaconda3/2023.09-0 
+conda activate cactus_env4
+apptainer pull --disable-cache docker://quay.io/comparative-genomics-toolkit/cactus:v2.9.3-gpu
+
+# run cactus-prepare first
+export IMAGE=$HOME/pipelines/cactus/test_smk8_cactus/cactus_v2.9.3-gpu.sif
+apptainer exec --cleanenv --home $PWD ${IMAGE} cactus-prepare seqfile.txt --outDir ./output --jobStore ./js --gpu > prepare.log
+
+# run
+# first dry run (-n) to test
+snakemake -p -s -k cactus-snakemake/cactus_gpu_gwdg.smk --configfile cactus-snakemake/config.yaml  --profile cactus-snakemake//profiles/slurm_profile -n
+
+# if dry run looks ok, run
+snakemake -p -s -k cactus-snakemake/cactus_gpu_gwdg.smk --configfile cactus-snakemake/config.yaml  --profile cactus-snakemake//profiles/slurm_profile 
+```
+
+
 # Genome alignment with [Cactus](https://github.com/ComparativeGenomicsToolkit/cactus)
+- forked from https://github.com/harvardinformatics/cactus-snakemake
+- edited by MaggieMCKO for gwdg clusters
 
 This documents the snakemake workflow for genome alignments with the Cactus genome aligner (GPU version).
 
@@ -16,20 +77,20 @@ Currently, SLURM is the only supported job scheduling software for this pipeline
 
 [Snakemake](https://snakemake.readthedocs.io/en/stable/) is a workflow management tool. Since Cactus is comprised of several steps, we use Snakemake to make sure those steps are run automatically and efficiently.
 
-You can [install Snakemake using conda](https://anaconda.org/bioconda/snakemake).
+You can [install Snakemake using conda](https://anaconda.org/bioconda/snakemake). See above `set up (create) a conda env`
 
-### 3. Cactus (Singularity image)
+### 3. Cactus (Singularity, now apptainer, image)
 
 [Cactus](https://github.com/ComparativeGenomicsToolkit/cactus) is whole genome alignment software.
 
 This pipeline was built around the Singularity image of the Cactus program optimized for GPU usage. Singularity is a program that containerizes and executes programs in an isolated environment, making them easier to use. 
 
-You can [install Singularity using conda](https://anaconda.org/conda-forge/singularity).
+You can [install Singularity using conda](https://anaconda.org/conda-forge/singularity). See above `set up (create) a conda env`
 
-With Singularity installed, you can create the image from [the Docker image provided with Cactus (GPU)](https://github.com/ComparativeGenomicsToolkit/cactus/releases) for the latest version (2.2.0 as of the writing of this file) as `cactus_v2.2.0-gpu.sif` with the following command:
+With Singularity installed, you can create the image from [the Docker image provided with Cactus (GPU)](https://github.com/ComparativeGenomicsToolkit/cactus/releases) for the latest version (2.9.3 as of the writing of this file) as `cactus_v2.9.3-gpu.sif` with the following command:
 
 ```{bash}
-singularity pull --disable-cache docker://quay.io/comparative-genomics-toolkit/cactus:v2.2.0-gpu
+apptainer pull --disable-cache docker://quay.io/comparative-genomics-toolkit/cactus:v2.9.3-gpu
 ```
 
 We chose the Singularity image over Docker for security reasons.
@@ -40,7 +101,7 @@ To run this pipeline you will need:
 
 1. The location of the Cactus executable (e.g. the path to the Cactus Singularity image)
 2. A phylogenetic tree of all species to align, with or without branch lengths
-3. The genome FASTA files for each species
+3. The (soft-masked) genome FASTA files for each species
 
 ## Preparing the Cactus input file
 
@@ -70,7 +131,7 @@ Generally, it can be run as follows:
 Specifically, for the Singularity image, it can be run as:
 
 ```{bash}
-singularity exec --cleanenv cactus_v2.2.0-gpu.sif cactus-prepare <INPUT FILE> --outDir <OUTPUT DIRECTORY> --jobStore <TEMP DIRECTORY> --gpu
+apptainer exec --cleanenv cactus_v2.9.3-gpu.sif cactus-prepare <INPUT FILE> --outDir <OUTPUT DIRECTORY> --jobStore <TEMP DIRECTORY> --gpu
 ```
 
 You will have to specify the paths defined within <>.
@@ -83,12 +144,14 @@ You will have to specify the paths defined within <>.
 
 ## Preparing the snakemake config file
 
-Now we can set up the config file for the snakemake pipeline. An example template is provided in this repository: `cactus-gpu-snakemake/config-template.yaml`. This file contains the following parameters that will be used by snakemake to run Cactus:
+Now we can set up the config file for the snakemake pipeline. An example template is provided in this repository: `cactus-snakemake/config.yaml`. This file contains the following parameters that will be used by snakemake to run Cactus:
 
 ```
 working_dir: <working_dir>
 
 cactus_path: <cactus_path>
+
+conda_env: <conda env path> 
 
 input_file: <input_file>
 
@@ -106,7 +169,9 @@ Simply replace each path surrounded by <> with the path you used when running `c
 ```
 working_dir: /path/to/directory/in/which/to/run/cactus/
 
-cactus_path: /path/to/my/cactus_v2.2.0-gpu.sif
+cactus_path: /path/to/my/cactus_v2.9.3-gpu.sif
+
+conda_env: /path/to/my/conda_env # run conda env list to see
 
 input_file: /path/to/my/input/file.txt
 
@@ -130,7 +195,7 @@ The `final_hal` file will be the one with all aligned genomes appended to it. It
 The config file also has resource allocations for each step of the cactus pipeline, e.g. for the alignment step:
 
 ```
-align_partition: "bigmem"
+align_partition: "fat"
 align_cpu: 24
 align_mem: "450g"
 align_time: "24:00:00"
@@ -142,13 +207,13 @@ Be sure to adjust these to your cluster and needs!
 
 ## Getting email updates for jobs
 
-If you wish to get emails when individual jobs submitted by snakemake END or FAIL, edit the file `cactus-gpu-snakemake/profiles/slurm_profile/config.yaml`. 
+If you wish to get emails when individual jobs submitted by snakemake END or FAIL, edit the file `cactus-snakemake/profiles/slurm_profile/config.v8+.yaml`. 
 
-Uncomment lines 14 and 15 and insert your email address there:
+Add the following lines below line 15 and insert your email address there:
 
 ```
-  #--mail-type=END,FAIL
-  #--mail-user=<YOUR EMAIL>
+  --mail-type=END,FAIL
+  --mail-user=<YOUR EMAIL>
 ```
 
 ## Running Cactus with Snakemake
@@ -156,17 +221,17 @@ Uncomment lines 14 and 15 and insert your email address there:
 Now we are ready to run Cactus with snakemake!
 
 ```{bash}
-snakemake -p -s cactus_gpu.smk --configfile <CONFIG FILE> --profile <SLURM PROFILE DIRECTORY> --dryrun
+snakemake -p -s -k cactus_gpu_gwdg.smk --configfile <CONFIG FILE> --profile <SLURM PROFILE DIRECTORY> --dryrun
 ```
 
-The `cactus_gpu.smk` script is located in the `cactus-gpu-snakemake`
+The `cactus_gpu_gwdg.smk` script is located in the `cactus-snakemake`
 
 For the other files, you will have to specify the paths defined within <>.
 
 | Name in command above      | Description |
 |----------------------------|-------------|
 | CONFIG FILE                | The config file prepared above that contains the paths for Cactus files |
-| SLURM PROFILE DIRECTORY    | The path to the **directory** containing the SLURM cluster configuration file called `config.yaml`. Relative to this file, this directory is `cactus-gpu-snakemake/profiles/slurm_profile/` |
+| SLURM PROFILE DIRECTORY    | The path to the **directory** containing the SLURM cluster configuration file called `config.v8+.yaml`. Relative to this file, this directory is `cactus-snakemake/profiles/slurm_profile/` |
 
 With the `--dryrun` option, this command will run through the pipeline without executing any commands to make sure no errors occur with the pipeline itself. When you are satisfied that the pipeline will be run correctly, remove `--dryrun` to execute the pipeline.
 
@@ -175,3 +240,4 @@ We also recommend running the pipeline script itself using a [terminal multiplex
 # Troubleshooting
 
 1. For some reason, snakemake dislikes when the extension of the input sequences is `.fa`. I think this is because the output of the ancestral sequences is also `.fa` and it looks for that pattern in the wildcards... Possibly similar to the case discussed here: https://www.embl.org/groups/bioinformatics-rome/blog/2022/10/an-example-of-what-the-hell-error-in-snakemake/ 
+
