@@ -12,7 +12,8 @@ screen -S ca4
 mkdir /home/mpg08/mko/pipelines/cactus/test_smk8_cactus
 cd /home/mpg08/mko/pipelines/cactus/test_smk8_cactus
 
-module load rev/23.12 anaconda3/2023.09-0 
+module load rev/23.12 anaconda3/2023.09-0
+module load rev/23.12 git/2.42.0
 
 git clone https://github.com/maggieMCKO/cactus-snakemake.git
 conda env create --name cactus_env4 --file=cactus-snakemake/envs/conda-env_gwdg.yaml
