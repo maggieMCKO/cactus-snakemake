@@ -27,7 +27,7 @@ apptainer --version # 1.3.6
 This version of Snakemake seems to have a bug that prevent conda directive in certain cases
 - https://github.com/snakemake/snakemake/issues/3192
 - temp solution: manually change `snakemake/deployment/conda.py` in the created conda env as the above link
-- line 927 from `return self.path == other.file` to `return self.path == other.path`
+- line 970 from `return self.path == other.file` to `return self.path == other.path`
 ```bash
 # /home/mpg08/mko/.conda/envs/cactus_env4/lib/python3.12/site-packages/snakemake/deployment/conda.py
 ```
