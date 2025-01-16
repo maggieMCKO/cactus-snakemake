@@ -16,7 +16,7 @@ cluster-generic-submit-cmd:
 
 # Default resource settings (applied if not specified in rule)
 default-resources:
-  - slurm_partition='medium'
+  - slurm_partition='scc-cpu'
   - cpus_per_task=8
   - mem_mb=10000
   - runtime=1440
