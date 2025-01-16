@@ -38,7 +38,7 @@ use_gpu: True
 
 #############################################################################
 
-mask_partition: "gpu" 
+mask_partition: "scc-gpu" 
 mask_gpu: 2
 mask_cpu: 24
 mask_mem: "100gb" # strings with a number followed by a unit (B, KB, MB, GB, TB, PB, KiB, MiB, GiB, TiB, PiB
@@ -46,7 +46,7 @@ mask_runtime: "30m" # can be integer (in min) or string (e.g. "10m"), ms, s, m, 
 
 ##########################
 
-blast_partition: "gpu"
+blast_partition: "scc-gpu"
 blast_gpu: 4
 blast_cpu: 24
 blast_mem: "200gb"
@@ -54,7 +54,7 @@ blast_runtime: "10m"
 
 ##########################
 
-align_partition: "fat"
+align_partition: "scc-gpu"
 align_cpu: 24
 align_mem: "450gb"
 align_runtime: "24h"
@@ -62,28 +62,28 @@ align_runtime: "24h"
 
 ##########################
 
-convert_partition: "medium"
+convert_partition: "scc-cpu"
 convert_cpu: 8
 convert_mem: "8gb"
 convert_runtime: "1h"
 
 ##########################
 
-copy_partition: "medium"
+copy_partition: "scc-cpu"
 copy_cpu: 1
 copy_mem: "8gb"
 copy_runtime: "1h"
 
 ##########################
 
-append_partition: "medium"
+append_partition: "scc-cpu"
 append_cpu: 8
 append_mem: "48gb"
 append_runtime: "6h"
 
 ##########################
 
-maf_partition: "medium"
+maf_partition: "scc-cpu"
 maf_cpu: 8
 maf_mem: "100gb"
 maf_runtime: "24h"
